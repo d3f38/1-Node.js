@@ -4,7 +4,8 @@ const app = express();
 const {
     exec,
     execFile
-} = require('child_process')
+} = require('child_process');
+
 
 app.get('/api/repos', (req, res) => {
     const path = process.argv[2];
@@ -125,7 +126,19 @@ app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res
 app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, res) => {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
-    const path = req.params.pathToFile;
+    const pathToFile = req.params.pathToFile;
+
+    execFile('git', ['show', `${commitHash}:${pathToFile}`], {
+        cwd: `repos/${repositoryId}`
+    }, (err, out) => {
+
+        if (err) {
+            console.error(err);
+            res.status(404).send("NOT FOUND.");
+        } else {
+            res.send(out)
+        }
+    });
 
 });
 
@@ -143,7 +156,7 @@ app.delete('/api/repos/:repositoryId', function(req, res) {
 })
 
 app.post('/api/repos', (req, res) => {
-
+    console.log(req.body)
 
 });
 
