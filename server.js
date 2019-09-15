@@ -5,13 +5,14 @@ const {
     exec,
     execFile
 } = require('child_process');
+const initPath = process.argv[2];
 app.use(express.json())
 
 app.get('/api/repos', (req, res) => {
-    const path = process.argv[2];
+
     let reposArray = [];
 
-    fs.readdir(path, {
+    fs.readdir(initPath, {
         "withFileTypes": true
     }, (err, files) => {
         files.forEach(file => {
@@ -25,7 +26,7 @@ app.get('/api/repos/:repositoryId/commits/:commitHash', (req, res) => {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
     execFile('git', ['log', commitHash, '--pretty=format:"{commit: %h, date: %ad, comments: %s}"'], {
-        cwd: `repos/${repositoryId}`
+        cwd: `${initPath}/${repositoryId}`
     }, (err, out) => {
         if (err) {
             console.error(err)
@@ -54,7 +55,7 @@ app.get('/api/repos/:repositoryId/commits/:commitHash/diff', (req, res) => {
     const commitHash = req.params.commitHash;
     let currentCommit, previousCommit;
 
-    process.chdir(`./repos/${repositoryId}`);
+    process.chdir(`./${initPath}/${repositoryId}`);
 
     exec(`git log`, (err, out) => {
         if (err) {
@@ -92,9 +93,8 @@ app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res
 
     if (commitHash) {
         execFile('git', ['ls-tree', '-r', '--name-only', commitHash], {
-            cwd: `repos/${repositoryId}`
+            cwd: `${initPath}/${repositoryId}`
         }, (err, out) => {
-            // exec(`git ls-files`, (err, out) => {
             if (err) {
                 console.error(err);
                 res.status(404).send("NOT FOUND.");
@@ -108,7 +108,7 @@ app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res
         });
     } else {
         execFile('git', ['ls-tree', '-r', '--name-only', 'master'], {
-            cwd: `repos/${repositoryId}`
+            cwd: `${initPath}/${repositoryId}`
         }, (err, out) => {
 
             if (err) {
@@ -129,7 +129,7 @@ app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, r
     const pathToFile = req.params.pathToFile;
 
     execFile('git', ['show', `${commitHash}:${pathToFile}`], {
-        cwd: `repos/${repositoryId}`
+        cwd: `${initPath}/${repositoryId}`
     }, (err, out) => {
 
         if (err) {
@@ -145,7 +145,7 @@ app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, r
 app.delete('/api/repos/:repositoryId', function(req, res) {
     const repositoryId = req.params.repositoryId;
 
-    fs.rmdir(`repos/${repositoryId}`, { "recursive": true }, (err, out) => {
+    fs.rmdir(`${initPath}/${repositoryId}`, { "recursive": true }, (err, out) => {
         if (err) {
             console.error(err);
             res.status(404).send("NOT FOUND.");
@@ -157,7 +157,7 @@ app.delete('/api/repos/:repositoryId', function(req, res) {
 
 app.post('/api/repos', (req, res) => {
     execFile('git', ['clone', req.body.url], {
-        cwd: `repos/`
+        cwd: `${initPath}`
     }, (err, out) => {
 
         if (err) {
