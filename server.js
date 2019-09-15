@@ -5,7 +5,7 @@ const {
     exec,
     execFile
 } = require('child_process');
-
+app.use(express.json())
 
 app.get('/api/repos', (req, res) => {
     const path = process.argv[2];
@@ -156,7 +156,17 @@ app.delete('/api/repos/:repositoryId', function(req, res) {
 })
 
 app.post('/api/repos', (req, res) => {
-    console.log(req.body)
+    execFile('git', ['clone', req.body.url], {
+        cwd: `repos/`
+    }, (err, out) => {
+
+        if (err) {
+            console.error(err);
+            res.status(404).send("NOT FOUND.");
+        } else {
+            res.send("repository loaded")
+        }
+    });
 
 });
 
