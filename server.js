@@ -9,20 +9,43 @@ const initPath = process.argv[2];
 app.use(express.json())
 
 app.get('/api/repos', (req, res) => {
-
-    let reposArray = [];
-
-    fs.readdir(initPath, {
-        "withFileTypes": true
-    }, (err, files) => {
-        files.forEach(file => {
-            reposArray.push(file.name);
-        });
-        res.send(reposArray);
-    });
+    getRepos(req, res);
 });
 
 app.get('/api/repos/:repositoryId/commits/:commitHash', (req, res) => {
+    getCommits(req, res);
+});
+
+app.get('/api/repos/:repositoryId/commits/:commitHash/diff', (req, res) => {
+    getDiffCommits(req, res);
+});
+
+app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res) => {
+    getContentFromDirectory(req, res)
+});
+
+app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, res) => {
+    getContentFromFile(req, res);
+});
+
+app.delete('/api/repos/:repositoryId', (req, res) => {
+    deleteRepository(req, res);
+});
+
+app.post('/api/repos', (req, res) => {
+    cloneRepository(req, res)
+});
+
+function getRepos(req, res) {
+    fs.readdir(initPath, {
+        "withFileTypes": true
+    }, (err, files) => {
+        const reposArray = files.map(file => file.name);
+        res.send(reposArray);
+    });
+}
+
+function getCommits(req, res) {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
     execFile('git', ['log', commitHash, '--pretty=format:"{commit: %h, date: %ad, comments: %s}"'], {
@@ -48,9 +71,9 @@ app.get('/api/repos/:repositoryId/commits/:commitHash', (req, res) => {
             }
         }
     });
-});
+}
 
-app.get('/api/repos/:repositoryId/commits/:commitHash/diff', (req, res) => {
+function getDiffCommits(req, res) {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
     let currentCommit, previousCommit;
@@ -81,12 +104,11 @@ app.get('/api/repos/:repositoryId/commits/:commitHash/diff', (req, res) => {
                     res.send(out);
                 }
             });
-
         }
     });
-});
+}
 
-app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res) => {
+function getContentFromDirectory(req, res) {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
     const path = req.params.path;
@@ -121,9 +143,9 @@ app.get('/api/repos/:repositoryId/?(tree/:commitHash/:path([^/]*)?)?', (req, res
             }
         });
     }
-});
+}
 
-app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, res) => {
+function getContentFromFile(req, res) {
     const repositoryId = req.params.repositoryId;
     const commitHash = req.params.commitHash;
     const pathToFile = req.params.pathToFile;
@@ -139,10 +161,9 @@ app.get('/api/repos/:repositoryId/blob/:commitHash/:pathToFile([^/]*)?', (req, r
             res.send(out)
         }
     });
+}
 
-});
-
-app.delete('/api/repos/:repositoryId', function(req, res) {
+function deleteRepository(req, res) {
     const repositoryId = req.params.repositoryId;
 
     fs.rmdir(`${initPath}/${repositoryId}`, { "recursive": true }, (err, out) => {
@@ -153,9 +174,9 @@ app.delete('/api/repos/:repositoryId', function(req, res) {
             res.send('Repository deleted')
         }
     });
-})
+}
 
-app.post('/api/repos', (req, res) => {
+function cloneRepository(req, res) {
     execFile('git', ['clone', req.body.url], {
         cwd: `${initPath}`
     }, (err, out) => {
@@ -167,9 +188,7 @@ app.post('/api/repos', (req, res) => {
             res.send("repository loaded")
         }
     });
-
-});
-
+}
 
 
 app.listen(3000);
